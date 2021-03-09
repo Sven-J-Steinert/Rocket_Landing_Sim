@@ -10,17 +10,17 @@ import sys
 
 from geomdl import NURBS
 
-MAX_STEPS = 300
+MAX_STEPS = 400
 dt = 0.01                       # timestep size in seconds
 t = 0
 a_g = np.array([0,0,-9.81])     # gravitational acceleration
-a_re_flat = 10                 # rocket engine flat acceleration
+a_re_flat = 20                # rocket engine flat acceleration
 a_re_dir = np.array([0,0,1])    # rocket engine acceleration direction -> normed vector
 a_re = a_re_flat*a_re_dir       # rocket engine acceleration
 # INITIALS
 a = np.array([0,0,0])           # acceleration vector
-v = np.array([-3,-3,-10])           # velocity vector
-x = np.array([5,5,20])          # location vector
+v = np.array([-8,-1,-10])           # velocity vector
+x = np.array([5,10,35])          # location vector
 
 v_old = v                       # velocity vector from previous timestep
 
@@ -74,6 +74,7 @@ d_min = spline_vec[d_min_i]
 df = pd.DataFrame(columns=['t', 'x_0', 'x_1', 'x_2', 'v_0', 'v_1', 'v_2', 'a_0', 'a_1', 'a_2', 'a_re_dir_0', 'a_re_dir_1', 'a_re_dir_2', 'a_re_0','a_re_1','a_re_2','d_min_0','d_min_1','d_min_2','d_min_3','d_min_4','d_min_5'], index=range(0,MAX_STEPS))
 df.iloc[0] = [t,x[0],x[1],x[2],v[0],v[1],v[2],a[0],a[1],a[2],a_re_dir[0],a_re_dir[1],a_re_dir[2],a_re[0],a_re[1],a_re[2],d_min[0],d_min[1],d_min[2],d_min[3],d_min[4],d_min[5]]
 
+flight_mode = 'direction_correction'
 
 for t_steps in range(1,MAX_STEPS):
     #norm1 = x / np.linalg.norm(x)
@@ -86,7 +87,27 @@ for t_steps in range(1,MAX_STEPS):
             d_min_i = i
     d_min = spline_vec[d_min_i]
     d_min_temp = -(spline_vec[d_min_i,3:6] - spline_vec[d_min_i,0:3])
-    a_re_dir = d_min_temp/np.linalg.norm(d_min_temp)
+
+    #a_re_dir = d_min_temp/np.linalg.norm(d_min_temp)
+
+    if flight_mode == 'direction_correction':
+        v_diff_y = - ( x[0]/(np.sqrt(x[0]**2 + x[1]**2)) )
+        v_diff_x = np.sqrt(1-v_diff_y**2)
+        a_re_dir = np.array([v_diff_x,v_diff_y,0])
+
+        if 0.90 < (x[0]/v[0])/(x[1]/v[1]) < 1.1 :
+            flight_mode = 'cruise'
+
+    if flight_mode == 'cruise':
+        a_re_dir = np.array([0,0,0])
+        s_dt = np.linalg.norm(v)/ (a_re_flat+a_g[2])
+        s = 0.5*(a_re_flat+a_g[2]) * s_dt**2
+        s = s * 1.1
+        if np.linalg.norm(x) <= s:
+            flight_mode = 'suicide_burn'
+
+    if flight_mode == 'suicide_burn':
+        a_re_dir = -(v/np.linalg.norm(v))
     a_re = a_re_flat*a_re_dir
     a = a_g + a_re                              # compute new acceleration
     v = v_old + a*dt                            # compute new velocity
