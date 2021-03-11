@@ -1,12 +1,10 @@
 # Rocket Landing Simulator
 Time step based physical simulation in python.
 
-core computation
-int a dt = v
-int v dt = x
+core computation by integrating a over dt for v and v over dt for x
 
 currently supported parameters
 
-gravitaional acceleration
-rocket engine acceleration
-rocket engine direction
+* gravitaional acceleration
+* rocket engine acceleration
+* rocket engine direction
