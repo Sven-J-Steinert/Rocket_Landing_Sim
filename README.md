@@ -14,3 +14,8 @@ currently supported parameters
 * gravitaional acceleration
 * rocket engine acceleration
 * rocket engine direction
+
+currently supported flight modes
+
+* direction correction
+* suicide burn
