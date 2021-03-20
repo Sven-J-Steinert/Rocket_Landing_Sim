@@ -9,17 +9,17 @@ from mpl_toolkits.mplot3d import Axes3D
 import sys
 
 
-MAX_STEPS = 500
+MAX_STEPS = 600
 dt = 0.01                       # timestep size in seconds
 t = 0
 a_g = np.array([0,0,-9.81])     # gravitational acceleration
-a_re_flat = 20                # rocket engine flat acceleration
+a_re_flat = 25                 # rocket engine flat acceleration
 a_re_dir = np.array([0,0,1])    # rocket engine acceleration direction -> normed vector
 a_re = a_re_flat*a_re_dir       # rocket engine acceleration
 # INITIALS
 a = np.array([0,0,0])           # acceleration vector
-v = np.array([-20,-1,-20])           # velocity vector
-x = np.array([20,20,80])          # location vector
+v = np.array([-15,5,-30])           # velocity vector
+x = np.array([30,30,80])          # location vector
 
 v_old = v                       # velocity vector from previous timestep
 
@@ -27,35 +27,35 @@ v_old = v                       # velocity vector from previous timestep
 print('┌────────────────────────┐')
 print('│        SETTINGS        │')
 print('├────────────────────────┤')
+
 print('│  g │ ' + str(a_g[2]) + ' m/s²        │')
 print('│ re │ ' + str(a_re_flat) + ' m/s²           │')
 print('│ dt │ ' + str(dt) + ' s            │')
 print('└────────────────────────┘')
-print('Initial values')
-print('a: ' + str(a))
-print('v: ' + str(v))
-print('x: ' + str(x))
-print('dt: ' + str(dt))
 
-
-#df = pd.DataFrame(np.array([t,x[0],x[1],x[2],v[0],v[1],v[2],a[0],a[1],a[2]]) ,columns=['t', 'x_0', 'x_1', 'x_2', 'v_0', 'v_1', 'v_2', 'a_0', 'a_1', 'a_2'])
 df = pd.DataFrame(columns=['t', 'x_0', 'x_1', 'x_2', 'v_0', 'v_1', 'v_2', 'a_0', 'a_1', 'a_2', 'a_re_dir_0', 'a_re_dir_1', 'a_re_dir_2', 'a_re_0','a_re_1','a_re_2'], index=range(0,MAX_STEPS))
 df.iloc[0] = [t,x[0],x[1],x[2],v[0],v[1],v[2],a[0],a[1],a[2],a_re_dir[0],a_re_dir[1],a_re_dir[2],a_re[0],a_re[1],a_re[2]]
 
 flight_mode = 'direction_correction'
 
+
 for t_steps in range(1,MAX_STEPS):
 
     if flight_mode == 'direction_correction':
+        # correct direction towards target on x/y coordinates
         v_diff_y = - ( x[0]/(np.sqrt(x[0]**2 + x[1]**2)) )
         v_diff_x = np.sqrt(1-v_diff_y**2)
         a_re_dir = np.array([v_diff_x,v_diff_y,0])
 
-        if 0.90 < (x[0]/v[0])/(x[1]/v[1]) < 1.1 :
+        # determine when to switch to cruise
+        if 0.90 < abs(x[0]/v[0])/abs(x[1]/v[1]) < 1.1 :
             flight_mode = 'cruise'
 
+
     if flight_mode == 'cruise':
+        # engine cutoff
         a_re_dir = np.array([0,0,0])
+        # determine when to switch to suicide_burn
         s_dt = np.linalg.norm(v)/ (a_re_flat+a_g[2])
         s = 0.5*(a_re_flat+a_g[2]) * s_dt**2
         s = s * 1.1
@@ -63,7 +63,9 @@ for t_steps in range(1,MAX_STEPS):
             flight_mode = 'suicide_burn'
 
     if flight_mode == 'suicide_burn':
+        # accelerate in velocity direction
         a_re_dir = -(v/np.linalg.norm(v))
+
 
     # GENERAL PHYSICS
     a_re = a_re_flat*a_re_dir
@@ -111,7 +113,7 @@ def animate(i):
 
     ax.scatter(df_x.iloc[skip*i][0],df_x.iloc[skip*i][1],df_x.iloc[skip*i][2], marker='o', color='black', label='point')
 
-    ax.scatter(0,0,0, marker='x', color='black', label='point')
+    ax.scatter(0,0,0, marker='X', color='black', label='point')
     #matplotlib.widgets.TextBox(ax, text='t = ' , initial='', color='.95', hovercolor='1', label_pad=0.01)
     #axLabel = plt.axes([0.7, 0.05, 0.21, 0.075])
     #textbox = matplotlib.widgets.TextBox(axLabel, 'time: ')
