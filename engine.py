@@ -8,6 +8,9 @@ import matplotlib.animation as animation
 from mpl_toolkits.mplot3d import Axes3D
 import sys
 
+from scipy.integrate import quad
+from sympy import *
+
 
 MAX_STEPS = 600
 dt = 0.01                       # timestep size in seconds
@@ -16,10 +19,11 @@ a_g = np.array([0,0,-9.81])     # gravitational acceleration
 a_re_flat = 25                 # rocket engine flat acceleration
 a_re_dir = np.array([0,0,1])    # rocket engine acceleration direction -> normed vector
 a_re = a_re_flat*a_re_dir       # rocket engine acceleration
+
 # INITIALS
 a = np.array([0,0,0])           # acceleration vector
-v = np.array([-15,5,-30])           # velocity vector
-x = np.array([30,30,80])          # location vector
+v = np.array([-20,0,-20])           # velocity vector
+x = np.array([50,0,120])          # location vector
 
 v_old = v                       # velocity vector from previous timestep
 
@@ -27,7 +31,6 @@ v_old = v                       # velocity vector from previous timestep
 print('┌────────────────────────┐')
 print('│        SETTINGS        │')
 print('├────────────────────────┤')
-
 print('│  g │ ' + str(a_g[2]) + ' m/s²        │')
 print('│ re │ ' + str(a_re_flat) + ' m/s²           │')
 print('│ dt │ ' + str(dt) + ' s            │')
@@ -36,7 +39,7 @@ print('└───────────────────────�
 df = pd.DataFrame(columns=['t', 'x_0', 'x_1', 'x_2', 'v_0', 'v_1', 'v_2', 'a_0', 'a_1', 'a_2', 'a_re_dir_0', 'a_re_dir_1', 'a_re_dir_2', 'a_re_0','a_re_1','a_re_2'], index=range(0,MAX_STEPS))
 df.iloc[0] = [t,x[0],x[1],x[2],v[0],v[1],v[2],a[0],a[1],a[2],a_re_dir[0],a_re_dir[1],a_re_dir[2],a_re[0],a_re[1],a_re[2]]
 
-flight_mode = 'direction_correction'
+flight_mode = 'cruise'
 
 
 for t_steps in range(1,MAX_STEPS):
@@ -55,11 +58,34 @@ for t_steps in range(1,MAX_STEPS):
     if flight_mode == 'cruise':
         # engine cutoff
         a_re_dir = np.array([0,0,0])
-        # determine when to switch to suicide_burn
-        s_dt = np.linalg.norm(v)/ (a_re_flat+a_g[2])
-        s = 0.5*(a_re_flat+a_g[2]) * s_dt**2
-        s = s * 1.1
-        if np.linalg.norm(x) <= s:
+
+        # determine required time for suicide_burn
+        dt_1 = np.linalg.norm(v)/np.linalg.norm(a_re_flat)
+        dt_2 = (np.linalg.norm(a_g) * dt_1)/np.linalg.norm(a_re_flat)
+        dt_R = dt_1 + dt_2
+        #print('dt: ' + str(dt_R), end=' ')
+
+        # function: resulting acceleration in z axis during suicide_burn
+        #def a_R_z(x):
+        #    return (np.sin((dt_R/40*np.pi)*x)*(a_re_flat+a_g[2]))
+
+        #init_printing(use_unicode=False, wrap_line=False)
+        i = Symbol('i')
+        a_equation = sin((dt_R/40*np.pi)*i)*(a_re_flat+a_g[2])
+        v_equation = integrate(a_equation, i) + (a_re_flat+a_g[2])
+        c = (a_re_flat+a_g[2])/(dt_R/40*np.pi)
+        h = integrate(v_equation + c, (i,0, dt_R))
+        #print('   h: ' + str(h))
+
+        # function: resulting velocity in z axis during suicide_burn
+
+        # integrate function over dt_R
+
+
+
+
+
+        if x[2] <= h:
             flight_mode = 'suicide_burn'
 
     if flight_mode == 'suicide_burn':
