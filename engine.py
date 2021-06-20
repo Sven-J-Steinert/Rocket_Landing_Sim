@@ -2,6 +2,7 @@ import numpy as np
 import time
 import pandas as pd
 
+
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -12,9 +13,10 @@ from scipy.integrate import quad
 from sympy import *
 
 
-MAX_STEPS = 600
-dt = 0.01                       # timestep size in seconds
-t = 0
+
+dt = 0.01                      # timestep size in seconds
+MAX_STEPS = int(1/dt * 100)     # 100 real time seconds
+t = 0                           # start time = 0
 a_g = np.array([0,0,-9.81])     # gravitational acceleration
 a_re_flat = 25                 # rocket engine flat acceleration
 a_re_dir = np.array([0,0,1])    # rocket engine acceleration direction -> normed vector
@@ -22,10 +24,13 @@ a_re = a_re_flat*a_re_dir       # rocket engine acceleration
 
 # INITIALS
 a = np.array([0,0,0])           # acceleration vector
-v = np.array([-20,0,-20])           # velocity vector
-x = np.array([50,0,120])          # location vector
+v = np.array([20,20,0])           # velocity vector
+x = np.array([-50,-50,120])          # location vector
 
 v_old = v                       # velocity vector from previous timestep
+
+def normalize(x):
+    return (x/np.linalg.norm(x))
 
 
 print('┌────────────────────────┐')
@@ -39,19 +44,51 @@ print('└───────────────────────�
 df = pd.DataFrame(columns=['t', 'x_0', 'x_1', 'x_2', 'v_0', 'v_1', 'v_2', 'a_0', 'a_1', 'a_2', 'a_re_dir_0', 'a_re_dir_1', 'a_re_dir_2', 'a_re_0','a_re_1','a_re_2'], index=range(0,MAX_STEPS))
 df.iloc[0] = [t,x[0],x[1],x[2],v[0],v[1],v[2],a[0],a[1],a[2],a_re_dir[0],a_re_dir[1],a_re_dir[2],a_re[0],a_re[1],a_re[2]]
 
-flight_mode = 'cruise'
+
+# inner simulation for every step
+def check_suicide_burn(_x,_v):
+    _v_old = _v
+
+    for i in range(1000):
+        _a_re_dir = -(_v/np.linalg.norm(_v))
+        # GENERAL PHYSICS
+        _a_re = a_re_flat*_a_re_dir
+        _a = a_g + _a_re                              # compute new acceleration
+        _v = _v_old + _a*dt                            # compute new velocity
+        _x = _x + _v_old*dt + 0.5*(_v - _v_old)*dt       # compute new location
+
+        _v_old = _v
+
+        # early stopping for efficiency
+        if _x[2] <= 0:
+            #print('hit')
+            break
+        if abs(_v[2]) < 1 and _x[2] > 10:
+            #print('early hover')
+            break
+
+    if _x[2] <= 0:
+        return True
+    else:
+        return False
+
+
+flight_mode = 'direction_correction'
 
 
 for t_steps in range(1,MAX_STEPS):
 
     if flight_mode == 'direction_correction':
         # correct direction towards target on x/y coordinates
-        v_diff_y = - ( x[0]/(np.sqrt(x[0]**2 + x[1]**2)) )
-        v_diff_x = np.sqrt(1-v_diff_y**2)
-        a_re_dir = np.array([v_diff_x,v_diff_y,0])
+        if not (x[0] == 0) and (x[1] == 0):
+            v_diff_y = - ( x[0]/(np.sqrt(x[0]**2 + x[1]**2)) )
+            v_diff_x = np.sqrt(1-v_diff_y**2)
+            a_re_dir = np.array([v_diff_x,v_diff_y,0])
 
-        # determine when to switch to cruise
-        if 0.90 < abs(x[0]/v[0])/abs(x[1]/v[1]) < 1.1 :
+            # determine when to switch to cruise
+            if 0.90 < abs(x[0]/v[0])/abs(x[1]/v[1]) < 1.1 :
+                flight_mode = 'cruise'
+        else:
             flight_mode = 'cruise'
 
 
@@ -59,33 +96,8 @@ for t_steps in range(1,MAX_STEPS):
         # engine cutoff
         a_re_dir = np.array([0,0,0])
 
-        # determine required time for suicide_burn
-        dt_1 = np.linalg.norm(v)/np.linalg.norm(a_re_flat)
-        dt_2 = (np.linalg.norm(a_g) * dt_1)/np.linalg.norm(a_re_flat)
-        dt_R = dt_1 + dt_2
-        #print('dt: ' + str(dt_R), end=' ')
-
-        # function: resulting acceleration in z axis during suicide_burn
-        #def a_R_z(x):
-        #    return (np.sin((dt_R/40*np.pi)*x)*(a_re_flat+a_g[2]))
-
-        #init_printing(use_unicode=False, wrap_line=False)
-        i = Symbol('i')
-        a_equation = sin((dt_R/40*np.pi)*i)*(a_re_flat+a_g[2])
-        v_equation = integrate(a_equation, i) + (a_re_flat+a_g[2])
-        c = (a_re_flat+a_g[2])/(dt_R/40*np.pi)
-        h = integrate(v_equation + c, (i,0, dt_R))
-        #print('   h: ' + str(h))
-
-        # function: resulting velocity in z axis during suicide_burn
-
-        # integrate function over dt_R
-
-
-
-
-
-        if x[2] <= h:
+        # determine if suicide_burn should be started by simulating
+        if check_suicide_burn(_x=x, _v=v):
             flight_mode = 'suicide_burn'
 
     if flight_mode == 'suicide_burn':
@@ -124,7 +136,8 @@ df_a_re = df[['a_re_0','a_re_1','a_re_2']]
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-skip=5
+skip= int((1/dt)/30)
+
 
 
 
@@ -151,7 +164,7 @@ def animate(i):
 
 
 
-ani = animation.FuncAnimation(fig, animate, interval=100, repeat=True, frames=int(len(df)/skip))
+ani = animation.FuncAnimation(fig, animate, interval=10, repeat=True, frames=int(len(df)/skip))
 plt.show()
 
 print('')

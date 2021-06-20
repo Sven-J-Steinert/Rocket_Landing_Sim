@@ -18,4 +18,7 @@ currently supported parameters
 currently supported flight modes
 
 * direction correction
+* cruise
 * suicide burn
+
+The timing for the suicide burn is determined by simulating one for every timestep
