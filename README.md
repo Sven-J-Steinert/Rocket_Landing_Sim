@@ -8,6 +8,7 @@ x = location
 ```
 
 core computation by integrating a over dt for v and integrating v over dt for x
+<img src="https://latex.codecogs.com/svg.image?\int&space;a&space;\&space;dt" title="\int a \ dt" />
 
 currently supported parameters
 
