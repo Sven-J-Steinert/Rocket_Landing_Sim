@@ -24,8 +24,8 @@ a_re = a_re_flat*a_re_dir       # rocket engine acceleration
 
 # INITIALS
 a = np.array([0,0,0])           # acceleration vector
-v = np.array([20,20,0])           # velocity vector
-x = np.array([-50,-50,120])          # location vector
+v = np.array([-20,0,0])           # velocity vector
+x = np.array([50,50,120])          # location vector
 
 v_old = v                       # velocity vector from previous timestep
 
@@ -72,15 +72,22 @@ def check_suicide_burn(_x,_v):
     else:
         return False
 
-
+# start mode
 flight_mode = 'direction_correction'
 
 
 for t_steps in range(1,MAX_STEPS):
 
+
+
     if flight_mode == 'direction_correction':
+
+        # determine if suicide_burn should be started by simulating
+        if check_suicide_burn(_x=x, _v=v):
+            flight_mode = 'suicide_burn'
+
         # correct direction towards target on x/y coordinates
-        if not (x[0] == 0) and (x[1] == 0):
+        if not ((x[0] == 0) and (x[1] == 0)):
             v_diff_y = - ( x[0]/(np.sqrt(x[0]**2 + x[1]**2)) )
             v_diff_x = np.sqrt(1-v_diff_y**2)
             a_re_dir = np.array([v_diff_x,v_diff_y,0])
@@ -100,9 +107,18 @@ for t_steps in range(1,MAX_STEPS):
         if check_suicide_burn(_x=x, _v=v):
             flight_mode = 'suicide_burn'
 
+
     if flight_mode == 'suicide_burn':
-        # accelerate in velocity direction
+        # accelerate in the direction of the velocity
         a_re_dir = -(v/np.linalg.norm(v))
+
+        if a_re_dir[2] < 0:
+            flight_mode = 'landing'
+
+
+    if flight_mode == 'landing':
+        # final engine cutoff
+        a_re_dir = np.array([0,0,0])
 
 
     # GENERAL PHYSICS
@@ -119,7 +135,12 @@ for t_steps in range(1,MAX_STEPS):
     df.iloc[t_steps] = [t,x[0],x[1],x[2],v[0],v[1],v[2],a[0],a[1],a[2],a_re_dir[0],a_re_dir[1],a_re_dir[2],a_re[0],a_re[1],a_re[2]]
 
     if x[2] <= 0:
-        print('HIT THE GROUND')
+        if abs(v[2]) < 3:
+            print('LANDING SUCCESSFUL', end=' ')
+        else:
+            print('HIT THE GROUND TO HARD', end=' ')
+        print('touchdown with ' + "{:.2f}".format(abs(v[2])) + ' m/s')
+
         break
     #time.sleep(0.01)
 
