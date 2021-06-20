@@ -22,3 +22,5 @@ currently supported flight modes
 * suicide burn
 
 The timing for the suicide burn is determined by simulating one for every timestep
+
+![](https://raw.githubusercontent.com/unconsciou5/Rocket_Landing_Sim/master/doc/preview.gif)
