@@ -7,8 +7,7 @@ v = velocity
 x = location
 ```
 
-core computation by integrating a over dt for v and integrating v over dt for x
-<img src="https://latex.codecogs.com/png.image?\dpi{110}&space;\bg_white&space;\inline&space;\int&space;a&space;\&space;dt" title="\bg_white \inline \int a \ dt" />
+core computation by integrating a over dt = v and integrating v over dt = x
 
 currently supported parameters
 
