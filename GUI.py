@@ -8,7 +8,7 @@ for i in range(1, r):
     t = i/r
     s = 10*i
     print(s)
-    grid = Entity(model=Grid(s,s), scale=s, color=color.color(0,0,.8,lerp(.8,0,t)), rotation_x=0, y=0)
+    grid = Entity(model=Grid(s,s), scale=s, color=color.color(0,0,.8,lerp(.8,0,t)), rotation_x=90, y=0)
     subgrid = duplicate(grid)
     subgrid.model = Grid(s*2, s*2)
     subgrid.color = color.color(0,0,.8,lerp(.8,0,t))
